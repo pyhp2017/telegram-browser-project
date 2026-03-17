@@ -61,11 +61,12 @@ def fmt_page_header(title: str, url: str, page: int, total: int) -> str:
 
 
 def fmt_links(links: list[tuple[str, str]]) -> str:
+    """Compact reference list — mirrors the [N] markers shown inline in the page text."""
     if not links:
         return "No links on this page."
-    lines = ["<b>Links</b> — type a number to open:\n"]
+    lines = ["<b>Link references</b> (type a number to open):\n"]
     for i, (label, url) in enumerate(links[:MAX_LINKS_SHOWN], 1):
-        lines.append(f"  <code>{i:2}.</code> {escape(label)}")
+        lines.append(f"<code>[{i:2}]</code> {escape(label)}\n      <i>{escape(url[:70])}</i>")
     return "\n".join(lines)
 
 
@@ -108,14 +109,8 @@ async def open_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str)
     header = fmt_page_header(result["title"], result["url"], 1, total)
     body = header + escape(session["chunks"][0])
 
-    await msg.edit_text(body, parse_mode="HTML", disable_web_page_preview=True)
-
-    # Send links as a separate message
-    links_text = fmt_links(result["links"])
-    nav_hint = "\n\n<i>Use /more for next page • /links to re-show links • /back to go back</i>"
-    await update.effective_message.reply_text(
-        links_text + nav_hint, parse_mode="HTML", disable_web_page_preview=True
-    )
+    nav_hint = "<i>/more · /links · /back</i>\n" + "─" * 30 + "\n"
+    await msg.edit_text(nav_hint + body, parse_mode="HTML", disable_web_page_preview=True)
 
 
 async def do_search(update: Update, context: ContextTypes.DEFAULT_TYPE, query: str):
@@ -198,8 +193,7 @@ async def cmd_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     session["chunk_idx"] = idx
     total = len(chunks)
-    url = session["history"][-1] if session["history"] else ""
-    header = f"<b>[page {idx + 1}/{total}]</b>  <a href=\"{url}\">{escape(url[:60])}</a>\n{'─' * 30}\n"
+    header = f"<i>/more · /links · /back</i>  [page {idx + 1}/{total}]\n{'─' * 30}\n"
     await update.message.reply_text(
         header + escape(chunks[idx]), parse_mode="HTML", disable_web_page_preview=True
     )
