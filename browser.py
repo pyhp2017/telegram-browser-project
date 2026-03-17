@@ -72,15 +72,24 @@ def fetch_page(url: str) -> dict:
 
 def search_web(query: str, max_results: int = 10) -> list[dict]:
     """Search DuckDuckGo and return a list of results."""
-    results = []
-    with DDGS() as ddgs:
-        for r in ddgs.text(query, max_results=max_results):
-            results.append({
-                "title": r.get("title", "")[:100],
-                "url": r.get("href", ""),
-                "snippet": r.get("body", "")[:200],
-            })
-    return results
+    last_exc = None
+    for attempt in range(3):
+        try:
+            results = []
+            with DDGS() as ddgs:
+                for r in ddgs.text(query, max_results=max_results):
+                    results.append({
+                        "title": r.get("title", "")[:100],
+                        "url": r.get("href", ""),
+                        "snippet": r.get("body", "")[:200],
+                    })
+            return results
+        except Exception as e:
+            last_exc = e
+    raise RuntimeError(
+        f"DuckDuckGo search failed after 3 attempts: {last_exc}\n"
+        "Try: pip install -U duckduckgo-search"
+    ) from last_exc
 
 
 def chunk_text(text: str, size: int = CHUNK_SIZE) -> list[str]:
